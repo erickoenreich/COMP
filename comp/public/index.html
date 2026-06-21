@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>COMP</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:    #0a0a0a;
+    --paper:  #f5f4f0;
+    --mid:    #e8e6e0;
+    --muted:  #9a9890;
+    --faint:  #d4d2cc;
+    --accent: #1a1a1a;
+    --up:     #1a6b3c;
+    --down:   #8b1a1a;
+    --up-bg:  #e8f5ee;
+    --down-bg:#faeaea;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.4;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Shell ── */
+  .shell {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 5rem;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 1.25rem 1.25rem .75rem;
+    border-bottom: 1.5px solid var(--ink);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .wordmark {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--ink);
+    font-family: var(--sans);
+  }
+  .wordmark sup {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    vertical-align: super;
+    margin-left: 2px;
+  }
+  .sub-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Search area ── */
+  .search-area {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--faint);
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .search-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 10px;
+  }
+  .search-input {
+    flex: 1;
+    height: 48px;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 0 14px;
+    font-size: 16px;
+    font-family: var(--sans);
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+    transition: border-color .15s;
+    -webkit-appearance: none;
+  }
+  .search-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(0,0,0,0.08); }
+  .search-input::placeholder { color: var(--muted); }
+  .search-btn {
+    height: 48px;
+    width: 48px;
+    background: var(--ink);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .search-btn:active { opacity: 0.7; }
+
+  /* Grade pills */
+  .grade-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+  .grade-row::-webkit-scrollbar { display: none; }
+  .grade-pill {
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 16px;
+    border: 1.5px solid var(--faint);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    transition: all .12s;
+  }
+  .grade-pill.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+  }
+  .grade-pill:active { opacity: 0.7; }
+
+  /* ── Results ── */
+  .results { flex: 1; padding: 0; }
+
+  /* Empty / loading states */
+  .state-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    gap: .75rem;
+    color: var(--muted);
+  }
+  .state-icon { font-size: 36px; }
+  .state-label { font-size: 15px; }
+  .state-sub { font-size: 13px; color: var(--faint); }
+
+  /* Spinner */
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2.5px solid var(--faint);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Price summary cards ── */
+  .summary {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--faint);
+  }
+  .summary-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: .75rem;
+  }
+  .price-hero {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: .5rem;
+  }
+  .price-main {
+    font-size: 42px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: -1px;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .price-label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 20px;
+    margin-left: 4px;
+  }
+  .trend-up   { background: var(--up-bg);   color: var(--up); }
+  .trend-down { background: var(--down-bg); color: var(--down); }
+  .trend-flat { background: var(--mid);     color: var(--muted); }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 1rem;
+  }
+  .stat-box {
+    background: var(--mid);
+    border-radius: 6px;
+    padding: .625rem .5rem;
+    text-align: center;
+  }
+  .stat-val {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--ink);
+  }
+  .stat-key {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  /* ── Sales table ── */
+  .sales-section { padding: 0 1.25rem 1.25rem; }
+  .sales-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    padding: 1rem 0 .625rem;
+    border-bottom: 1px solid var(--faint);
+    margin-bottom: 0;
+  }
+  .sale-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 0;
+    border-bottom: 1px solid var(--faint);
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sale-row:last-child { border-bottom: none; }
+  .sale-row:active { background: var(--mid); margin: 0 -1.25rem; padding: .75rem 1.25rem; }
+  .sale-left { flex: 1; min-width: 0; }
+  .sale-title {
+    font-size: 13px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sale-date {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .sale-price {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .sale-arrow {
+    color: var(--faint);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ── Paywall ── */
+  .paywall {
+    margin: 1.5rem 1.25rem;
+    background: var(--ink);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    color: #fff;
+  }
+  .paywall-title { font-size: 20px; font-weight: 700; margin-bottom: .5rem; }
+  .paywall-sub { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 1.5rem; line-height: 1.5; }
+  .paywall-price {
+    font-size: 32px;
+    font-weight: 800;
+    font-family: var(--mono);
+    margin-bottom: .25rem;
+  }
+  .paywall-cycle { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem; }
+  .paywall-btn {
+    display: block;
+    width: 100%;
+    height: 48px;
+    background: #fff;
+    color: var(--ink);
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .paywall-btn:active { opacity: 0.8; }
+  .paywall-note { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: .75rem; }
+
+  /* ── No results ── */
+  .no-results {
+    padding: 3rem 1.25rem;
+    text-align: center;
+    color: var(--muted);
+  }
+  .no-results-title { font-size: 16px; font-weight: 600; margin-bottom: .5rem; color: var(--ink); }
+  .no-results-sub { font-size: 13px; line-height: 1.6; }
+
+  /* ── Bottom nav placeholder (for future) ── */
+  .bottom-safe { height: env(safe-area-inset-bottom, 0); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="wordmark">COMP<sup>BETA</sup></div>
+    <div class="sub-badge" id="subBadge">PRO</div>
+  </header>
+
+  <div class="search-area">
+    <div class="search-row">
+      <input
+        class="search-input"
+        type="text"
+        id="searchInput"
+        placeholder="2023 Topps Chrome Ohtani…"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="search"
+      >
+      <button class="search-btn" id="searchBtn" onclick="runSearch()" aria-label="Search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+    </div>
+    <div class="grade-row" id="gradeRow">
+      <button class="grade-pill active" data-grade="">All grades</button>
+      <button class="grade-pill" data-grade="raw">Raw</button>
+      <button class="grade-pill" data-grade="10">PSA 10</button>
+      <button class="grade-pill" data-grade="9">PSA 9</button>
+      <button class="grade-pill" data-grade="8">PSA 8</button>
+      <button class="grade-pill" data-grade="7">PSA 7</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="state-screen">
+      <div class="state-icon">🃏</div>
+      <div class="state-label">Search any card to see comps</div>
+      <div class="state-sub">Player · Set · Year · Parallel</div>
+    </div>
+  </div>
+
+  <div class="bottom-safe"></div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+let selectedGrade = "";
+let lastQuery = "";
+let isLoading = false;
+
+// Demo mode: show paywall after 3 free searches (replace with real auth)
+let searchCount = parseInt(localStorage.getItem('comp_searches') || '0');
+const FREE_LIMIT = 3;
+const IS_PRO = localStorage.getItem('comp_pro') === 'true';
+
+// ── Grade pills ───────────────────────────────────────────────
+document.getElementById('gradeRow').addEventListener('click', e => {
+  const pill = e.target.closest('.grade-pill');
+  if (!pill) return;
+  document.querySelectorAll('.grade-pill').forEach(p => p.classList.remove('active'));
+  pill.classList.add('active');
+  selectedGrade = pill.dataset.grade;
+  if (lastQuery) runSearch();
+});
+
+// ── Search ────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+});
+
+async function runSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query || isLoading) return;
+
+  // Paywall check
+  if (!IS_PRO && searchCount >= FREE_LIMIT) {
+    showPaywall();
+    return;
+  }
+
+  lastQuery = query;
+  isLoading = true;
+  document.getElementById('searchBtn').style.opacity = '0.5';
+  showLoading();
+
+  try {
+    const r = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, grade: selectedGrade }),
+    });
+    const data = await r.json();
+
+    if (data.error) { showError(data.error); return; }
+
+    searchCount++;
+    localStorage.setItem('comp_searches', searchCount);
+    renderResults(data);
+  } catch (err) {
+    showError('Connection error — check your signal and try again');
+  } finally {
+    isLoading = false;
+    document.getElementById('searchBtn').style.opacity = '1';
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+function fmt(price) {
+  if (!price && price !== 0) return '—';
+  return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function trendBadge(t) {
+  if (t === null || t === undefined) return '';
+  const cls = t > 2 ? 'trend-up' : t < -2 ? 'trend-down' : 'trend-flat';
+  const icon = t > 2 ? '↑' : t < -2 ? '↓' : '→';
+  const label = (t > 0 ? '+' : '') + t + '%';
+  return `<span class="trend-badge ${cls}">${icon} ${label}</span>`;
+}
+
+function renderResults(d) {
+  if (!d.totalSales) {
+    document.getElementById('results').innerHTML = `
+      <div class="no-results">
+        <div class="no-results-title">No sales found</div>
+        <div class="no-results-sub">Try a broader search — remove parallels, conditions, or grade filters</div>
+      </div>`;
+    return;
+  }
+
+  const gradeLabel = selectedGrade === 'raw' ? 'Raw' : selectedGrade ? `PSA ${selectedGrade}` : 'All grades';
+
+  const salesRows = d.recentSales.map(s => `
+    <a class="sale-row" href="${escHtml(s.url || '#')}" target="_blank" rel="noopener">
+      <div class="sale-left">
+        <div class="sale-title">${escHtml(s.title || '')}</div>
+        <div class="sale-date">${fmtDate(s.date)}${s.grader && s.grade ? ` · ${s.grader} ${s.grade}` : ''}</div>
+      </div>
+      <div class="sale-price">${fmt(s.price)}</div>
+      <div class="sale-arrow">›</div>
+    </a>`).join('');
+
+  document.getElementById('results').innerHTML = `
+    <div class="summary">
+      <div class="summary-label">${escHtml(gradeLabel)} · ${d.totalSales} sales</div>
+      <div class="price-hero">
+        <div class="price-main">${fmt(d.median || d.avg)}</div>
+        <div class="price-label">median${trendBadge(d.trend)}</div>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">Last sold ${fmt(d.lastSalePrice)} · ${fmtDate(d.lastSaleDate)}</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val">${fmt(d.avg)}</div><div class="stat-key">Avg</div></div>
+        <div class="stat-box"><div class="stat-val">${fmt(d.median)}</div><div class="stat-key">Median</div></div>
+        <div class="stat-box"><div class="stat-val">${fmt(d.low)}</div><div class="stat-key">Low</div></div>
+        <div class="stat-box"><div class="stat-val">${fmt(d.high)}</div><div class="stat-key">High</div></div>
+      </div>
+    </div>
+    <div class="sales-section">
+      <div class="sales-title">Recent sales</div>
+      ${salesRows}
+    </div>`;
+}
+
+function showLoading() {
+  document.getElementById('results').innerHTML = `
+    <div class="state-screen"><div class="spinner"></div><div class="state-label">Pulling comps…</div></div>`;
+}
+
+function showError(msg) {
+  document.getElementById('results').innerHTML = `
+    <div class="state-screen">
+      <div class="state-icon">⚠</div>
+      <div class="state-label">${escHtml(msg)}</div>
+      <div class="state-sub">Check your connection or try again</div>
+    </div>`;
+}
+
+function showPaywall() {
+  document.getElementById('results').innerHTML = `
+    <div class="paywall">
+      <div class="paywall-title">You've used your 3 free searches</div>
+      <div class="paywall-sub">Get unlimited comps at shows, price history, and trend data.</div>
+      <div class="paywall-price">$9</div>
+      <div class="paywall-cycle">per month · cancel anytime</div>
+      <button class="paywall-btn" onclick="handleSubscribe()">Start COMP Pro</button>
+      <div class="paywall-note">Secure payment via Stripe</div>
+    </div>`;
+}
+
+function handleSubscribe() {
+  // Replace with your Stripe payment link
+  alert('Stripe integration coming soon — set your STRIPE_LINK in the code');
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
